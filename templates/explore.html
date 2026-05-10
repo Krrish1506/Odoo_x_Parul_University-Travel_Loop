@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<!-- Globe.gl library -->
+<script src="https://unpkg.com/globe.gl@2.31.0/dist/globe.gl.min.js"></script>
+
+<nav class="navbar animate-in">
+    <div class="nav-brand" onclick="window.location.href='{{ url_for('dashboard') }}'"><i class="ph-fill ph-planet text-gradient-cyan"></i><span>Traveloop</span></div>
+    <div style="display:flex;gap:12px;">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline"><i class="ph ph-house"></i> Dashboard</a>
+    </div>
+</nav>
+
+<div class="bento-grid animate-in" style="margin-top:24px;">
+    <!-- LEFT: Search + Results -->
+    <div class="col-span-5" style="display:flex;flex-direction:column;gap:20px;max-height:85vh;">
+        <!-- Search Bar -->
+        <div class="bento-item" style="padding:24px; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border-subtle); border-radius: 24px;">
+            <div style="position:relative; margin-bottom: 12px;">
+                <i class="ph ph-magnifying-glass" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:20px;"></i>
+                <input type="text" id="searchInput" placeholder="Search destinations..." oninput="searchCities()" style="width:100%;padding:16px 16px 16px 48px;border-radius:14px;border:1px solid var(--border-subtle);background:var(--surface-2);color:var(--text-main);font-size:16px;outline:none;box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+            </div>
+            <!-- Filters -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="filterBtns">
+                <button class="filter-btn active" data-budget="" onclick="setFilter(this,'')">All</button>
+                <button class="filter-btn" data-budget="low" onclick="setFilter(this,'low')">💰 Budget</button>
+                <button class="filter-btn" data-budget="mid" onclick="setFilter(this,'mid')">💎 Mid-Range</button>
+                <button class="filter-btn" data-budget="high" onclick="setFilter(this,'high')">👑 Premium</button>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="cityResults" style="display:flex;flex-direction:column;gap:12px;"></div>
+    </div>
+
+    <!-- RIGHT: Interactive Globe -->
+    <div class="col-span-7" style="position:relative;">
+        <div class="bento-item" style="padding:0;overflow:hidden;height:80vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(56,189,248,0.05) 0%,transparent 70%);">
+            <div id="globeContainer" style="width:100%;height:100%;cursor:grab;"></div>
+            <!-- Focused City Detail Overlay -->
+            <div id="cityDetail" style="display:none;position:absolute;bottom:24px;left:24px;right:24px;background:var(--surface-2);backdrop-filter:blur(20px);border-radius:20px;border:1px solid var(--border-subtle);padding:24px;z-index:10;animation:slideUp 0.4s ease; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <div style="display:flex;gap:20px;">
+                    <img id="detailImg" src="" style="width:140px;height:100px;border-radius:14px;object-fit:cover;">
+                    <div style="flex:1;">
+                        <div style="display:flex;justify-content:space-between;align-items:start;">
+                            <div>
+                                <h3 id="detailName" style="font-size:24px;"></h3>
+                                <p id="detailCountry" style="font-size:14px;margin-top:2px;"></p>
+                            </div>
+                            <button id="detailSaveBtn" onclick="toggleSave()" style="background:none;border:none;cursor:pointer;font-size:28px;color:var(--text-muted);transition:all 0.3s;">♡</button>
+                        </div>
+                        <p id="detailDesc" style="font-size:13px;margin-top:8px;"></p>
+                        <div style="display:flex;gap:12px;margin-top:12px;">
+                            <span id="detailBudget" class="badge badge-orange"></span>
+                            <span id="detailCost" class="badge badge-cyan"></span>
+                            <span id="detailActs" style="font-size:12px;color:var(--accent-3);font-weight:700;"></span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:16px;">
+                    {% if trips %}
+                    <select id="tripSelector" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border-subtle);background:var(--surface-1);color:var(--text-main);font-size:14px;outline:none;">
+                        {% for t in trips %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+                    </select>
+                    <button onclick="addToTrip()" class="btn btn-primary" style="padding:12px 24px;"><i class="ph ph-plus-circle"></i> Add to Trip</button>
+                    {% else %}
+                    <a href="{{ url_for('create_trip') }}" class="btn btn-orange" style="flex:1;"><i class="ph ph-plus"></i> Create a Trip First</a>
+                    {% endif %}
+                    <button onclick="document.getElementById('cityDetail').style.display='none'" class="btn btn-outline" style="padding:12px 16px;"><i class="ph ph-x"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.filter-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border-subtle);background:var(--surface-2);color:var(--text-muted);cursor:pointer;font-size:13px;font-weight:600;transition:all 0.3s;}
+.filter-btn:hover{background:var(--surface-1);color:var(--text-main);}
+.filter-btn.active{background:rgba(14,165,233,0.15);color:var(--accent-1);border-color:var(--accent-1);}
+.city-card{background:#fff;border:1px solid var(--border-subtle);border-radius:18px;padding:0;overflow:hidden;cursor:pointer;transition:all 0.35s cubic-bezier(0.2,0.8,0.2,1);box-shadow: 0 4px 12px rgba(0,0,0,0.05);}
+.city-card:hover{transform:translateX(6px);box-shadow:0 12px 32px rgba(0,0,0,0.1);border-color:var(--accent-1);}
+.save-heart{transition:all 0.3s;cursor:pointer;}
+.save-heart:hover{transform:scale(1.3);}
+.save-heart.saved{color:#f472b6 !important;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+.heart-pulse{animation:pulse 0.4s ease;}
+</style>
+
+<script>
+const CITIES = {{ cities|tojson }};
+const ACTIVITIES = {{ activities|tojson }};
+let savedSet = new Set({{ saved|tojson }});
+let currentCity = null;
+let currentBudget = '';
+let globe;
+
+// ── Globe Setup ──
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('globeContainer');
+    const markers = Object.entries(CITIES).map(([name, d]) => ({
+        name, lat: d.lat, lng: d.lng, img: d.img, country: d.country,
+        size: Math.max(0.3, d.daily_budget / 100),
+        color: savedSet.has(name) ? '#f472b6' : '#38bdf8'
+    }));
+
+    globe = Globe()
+        .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+        .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+        .pointsData(markers)
+        .pointLat('lat').pointLng('lng')
+        .pointColor('color')
+        .pointAltitude(d => d.size * 0.04)
+        .pointRadius(d => d.size * 0.4)
+        .pointLabel(d => `<div style="background:rgba(0,0,0,0.8);padding:8px 14px;border-radius:10px;font-family:Inter;font-size:13px;border:1px solid rgba(56,189,248,0.3);"><b style="color:#7dd3fc">${d.name}</b><br><span style="color:#94a3b8">${d.country}</span></div>`)
+        .onPointClick(d => focusCity(d.name))
+        .atmosphereColor('#38bdf8')
+        .atmosphereAltitude(0.15)
+        .width(container.offsetWidth)
+        .height(container.offsetHeight)
+        (container);
+
+    globe.controls().autoRotate = true;
+    globe.controls().autoRotateSpeed = 0.8;
+    globe.controls().enableZoom = true;
+
+    // Initial load
+    searchCities();
+    window.addEventListener('resize', () => {
+        globe.width(container.offsetWidth).height(container.offsetHeight);
+    });
+});
+
+// ── Search ──
+function searchCities() {
+    const q = document.getElementById('searchInput').value;
+    fetch(`/api/destinations?q=${encodeURIComponent(q)}&budget=${currentBudget}`)
+        .then(r => r.json())
+        .then(cities => renderResults(cities));
+}
+
+function setFilter(btn, budget) {
+    currentBudget = budget;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    searchCities();
+}
+
+function renderResults(cities) {
+    const container = document.getElementById('cityResults');
+    
+    // Update globe markers to match filtered results
+    if (globe) {
+        const markers = cities.map(c => ({
+            name: c.name, lat: c.lat, lng: c.lng, img: c.img, country: c.country,
+            size: Math.max(0.3, c.daily_budget / 100),
+            color: savedSet.has(c.name) ? '#f472b6' : '#38bdf8'
+        }));
+        globe.pointsData(markers);
+
+        // Auto-focus if there is an exact search match
+        const q = document.getElementById('searchInput').value.trim();
+        if (cities.length === 1 && q !== "") {
+            focusCity(cities[0].name);
+        } else if (cities.length > 0 && q !== "") {
+            // Just pan to the first result to show it's there
+            globe.pointOfView({ lat: cities[0].lat, lng: cities[0].lng, altitude: 2.2 }, 800);
+        }
+    }
+
+    if (!cities.length) {
+        container.innerHTML = '<div class="bento-item" style="text-align:center;padding:40px;"><p>No destinations match your search.</p></div>';
+        return;
+    }
+    container.innerHTML = cities.map(c => `
+        <div class="city-card" onclick="focusCity('${c.name}')">
+            <div style="display:flex;">
+                <img src="${c.img}" style="width:120px;height:100px;object-fit:cover;flex-shrink:0;">
+                <div style="padding:14px;flex:1;min-width:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                        <div>
+                            <p style="font-weight:800;font-size:16px;color:var(--text-main);">${c.name}</p>
+                            <p style="font-size:12px;color:var(--text-muted);margin-top:2px;">${c.country} · ${c.activities} activities</p>
+                        </div>
+                        <span class="save-heart ${savedSet.has(c.name)?'saved':''}" onclick="event.stopPropagation();toggleSaveCard('${c.name}',this)" style="font-size:22px;color:${savedSet.has(c.name)?'#f472b6':'var(--text-muted)'};">${savedSet.has(c.name)?'♥':'♡'}</span>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:8px;">
+                        <span class="badge badge-orange" style="font-size:10px;padding:4px 10px;">${c.cost_index}</span>
+                        <span class="badge badge-cyan" style="font-size:10px;padding:4px 10px;">$${c.daily_budget}/day</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ── Focus City on Globe ──
+function focusCity(name) {
+    currentCity = name;
+    const c = CITIES[name];
+    if (!c) return;
+
+    // Rotate globe
+    globe.pointOfView({ lat: c.lat, lng: c.lng, altitude: 1.8 }, 1200);
+    globe.controls().autoRotate = false;
+
+    // Show detail panel
+    document.getElementById('detailImg').src = c.img;
+    document.getElementById('detailName').textContent = name;
+    document.getElementById('detailCountry').textContent = c.country;
+    document.getElementById('detailDesc').textContent = c.desc || '';
+    document.getElementById('detailBudget').textContent = '$' + c.daily_budget + '/day';
+    document.getElementById('detailCost').textContent = c.cost_index;
+    document.getElementById('detailActs').textContent = (ACTIVITIES[name]||[]).length + ' activities';
+
+    const saveBtn = document.getElementById('detailSaveBtn');
+    saveBtn.textContent = savedSet.has(name) ? '♥' : '♡';
+    saveBtn.style.color = savedSet.has(name) ? '#f472b6' : 'var(--text-muted)';
+
+    document.getElementById('cityDetail').style.display = 'block';
+}
+
+// ── Save/Unsave ──
+function toggleSave() { if(currentCity) toggleSaveCard(currentCity, document.getElementById('detailSaveBtn')); }
+
+function toggleSaveCard(city, el) {
+    fetch('/api/save_place', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({city})
+    }).then(r=>r.json()).then(data => {
+        if(data.saved) { savedSet.add(city); } else { savedSet.delete(city); }
+        el.textContent = data.saved ? '♥' : '♡';
+        el.style.color = data.saved ? '#f472b6' : 'var(--text-muted)';
+        el.classList.add('heart-pulse');
+        setTimeout(() => el.classList.remove('heart-pulse'), 400);
+        // Update detail panel if open
+        if(currentCity === city) {
+            const db = document.getElementById('detailSaveBtn');
+            db.textContent = data.saved ? '♥' : '♡';
+            db.style.color = data.saved ? '#f472b6' : 'var(--text-muted)';
+        }
+        searchCities();
+    });
+}
+
+// ── Add to Trip ──
+function addToTrip() {
+    if (!currentCity) return;
+    const tripId = document.getElementById('tripSelector')?.value;
+    if (!tripId) return;
+    const form = document.createElement('form');
+    form.method = 'POST'; form.action = '/api/add_city';
+    ['trip_id','city_name','num_days'].forEach((n,i) => {
+        const inp = document.createElement('input'); inp.type='hidden'; inp.name=n;
+        inp.value = [tripId, currentCity, '2'][i]; form.appendChild(inp);
+    });
+    document.body.appendChild(form); form.submit();
+}
+</script>
+{% endblock %}

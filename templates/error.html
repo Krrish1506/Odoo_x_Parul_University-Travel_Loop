@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<div style="display:flex;align-items:center;justify-content:center;min-height:80vh;text-align:center;padding:40px;">
+    <div class="bento-item animate-in" style="max-width:500px;">
+        <h1 class="text-gradient-orange" style="font-size:120px;margin-bottom:16px;">{{ code }}</h1>
+        <h2 style="margin-bottom:16px;">{{ msg }}</h2>
+        <p style="margin-bottom:32px;">The page you're looking for doesn't exist or you don't have access.</p>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary"><i class="ph ph-house"></i> Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

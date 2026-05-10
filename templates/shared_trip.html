@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<div style="max-width:800px;margin:0 auto;padding-top:40px;">
+    <div class="bento-item animate-in" style="text-align:center;padding:48px;">
+        <i class="ph-fill ph-planet text-gradient-cyan" style="font-size:56px;margin-bottom:24px;display:inline-block;"></i>
+        <h1 style="margin-bottom:8px;">{{ trip.name }}</h1>
+        <p style="color:var(--accent-1);margin-bottom:32px;"><i class="ph ph-calendar"></i> {{ trip.start_date }} — {{ trip.end_date }}</p>
+        {% if trip.description %}<p style="margin-bottom:32px;">{{ trip.description }}</p>{% endif %}
+
+        <div style="text-align:left;">
+        {% for stop in stops %}
+        {% set cd = cities.get(stop.city_name, {}) %}
+        <div style="margin-bottom:32px;padding:24px;background:rgba(0,0,0,0.2);border-radius:20px;border:1px solid rgba(255,255,255,0.05);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="color:var(--accent-1);font-size:24px;">{{ stop.city_name }}, {{ cd.get('country','') }}</h3>
+                <span class="badge badge-cyan">{{ stop.num_days }} days</span>
+            </div>
+            {% for act in activities %}{% if act.stop_id == stop.id %}
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:6px;border-left:3px solid var(--accent-2);">
+                <span>{{ act.name }}</span><span class="badge badge-orange">${{ act.cost }}</span>
+            </div>
+            {% endif %}{% endfor %}
+        </div>
+        {% endfor %}
+        </div>
+
+        <div style="display:flex;gap:16px;justify-content:center;margin-top:40px;flex-wrap:wrap;">
+            <a href="{{ url_for('index') }}" class="btn btn-primary"><i class="ph ph-rocket-launch"></i> Plan Your Own Trip</a>
+            <button class="btn btn-outline" onclick="navigator.clipboard.writeText(window.location.href);this.innerHTML='<i class=\'ph ph-check\'></i> Copied!'"><i class="ph ph-copy"></i> Copy Link</button>
+            <a href="https://twitter.com/intent/tweet?text=Check+out+my+trip!&url={{ request.url }}" target="_blank" class="btn btn-outline"><i class="ph ph-twitter-logo"></i> Tweet</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

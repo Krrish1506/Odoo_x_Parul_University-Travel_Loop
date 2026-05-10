@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<nav class="navbar animate-in">
+    <div class="nav-brand" onclick="window.location.href='{{ url_for('dashboard') }}'"><i class="ph-fill ph-planet text-gradient-cyan"></i><span>Traveloop</span></div>
+    <div style="display:flex;gap:12px;">
+        <a href="{{ url_for('city_search') }}" class="btn btn-outline"><i class="ph ph-magnifying-glass"></i> Cities</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline"><i class="ph ph-arrow-left"></i> Dashboard</a>
+    </div>
+</nav>
+
+<div class="bento-grid animate-in stagger-1">
+    <div class="bento-item col-span-12" style="padding:40px;">
+        <h1 style="margin-bottom:8px;">Activity <span class="text-gradient-orange">Search</span></h1>
+        <p style="margin-bottom:32px;">Browse sightseeing, food tours, and adventures — filter by type, cost, and duration.</p>
+        <form method="GET" action="{{ url_for('activity_search') }}" style="display:flex;gap:16px;flex-wrap:wrap;">
+            <div style="flex:2;min-width:200px;">
+                <div class="input-group" style="margin-bottom:0;"><label>Search</label><i class="ph ph-magnifying-glass"></i>
+                    <input type="text" name="q" value="{{ q }}" placeholder="Activity or city...">
+                </div>
+            </div>
+            <div style="flex:1;min-width:150px;">
+                <div class="input-group" style="margin-bottom:0;"><label>Type</label><i class="ph ph-funnel"></i>
+                    <select name="type"><option value="">All Types</option>
+                        {% for t in types %}<option value="{{ t }}" {% if atype == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="flex:1;min-width:150px;">
+                <div class="input-group" style="margin-bottom:0;"><label>Max Cost ($)</label><i class="ph ph-currency-dollar"></i>
+                    <input type="number" name="max_cost" value="{{ max_cost }}" placeholder="Any" min="0">
+                </div>
+            </div>
+            <div style="display:flex;align-items:flex-end;"><button type="submit" class="btn btn-orange"><i class="ph ph-magnifying-glass"></i> Filter</button></div>
+        </form>
+    </div>
+
+    {% for act in results %}
+    <div class="bento-item col-span-4 animate-in" style="padding:0;animation-delay:{{ loop.index0 * 0.05 }}s;">
+        <div style="height:160px;background-image:url('{{ act.img }}');background-size:cover;background-position:center;position:relative;border-radius:24px 24px 0 0;">
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(2,6,23,1),transparent 60%);border-radius:24px 24px 0 0;"></div>
+            <div class="badge badge-orange" style="position:absolute;top:16px;left:16px;">{{ act.type }}</div>
+            <div class="badge badge-cyan" style="position:absolute;top:16px;right:16px;"><i class="ph ph-timer"></i> {{ act.duration }}</div>
+        </div>
+        <div style="padding:24px;margin-top:-16px;position:relative;">
+            <h3 style="margin-bottom:4px;">{{ act.name }}</h3>
+            <p style="font-size:14px;margin-bottom:4px;"><i class="ph ph-map-pin"></i> {{ act.city }}</p>
+            <p style="font-size:24px;font-weight:800;color:var(--accent-2);margin-bottom:16px;">${{ act.cost }}</p>
+            {% if stops %}
+            <form action="{{ url_for('add_activity') }}" method="POST" style="display:flex;gap:8px;">
+                <select name="stop_id" style="flex:1;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:white;font-size:13px;">
+                    {% for s in stops %}<option value="{{ s.id }}">{{ s.trip_name }} → {{ s.city_name }}</option>{% endfor %}
+                </select>
+                <input type="hidden" name="trip_id" value="{% if stops %}{{ stops[0].trip_id }}{% endif %}">
+                <input type="hidden" name="name" value="{{ act.name }}">
+                <input type="hidden" name="cost" value="{{ act.cost }}">
+                <input type="hidden" name="type" value="{{ act.type }}">
+                <input type="hidden" name="duration" value="{{ act.duration }}">
+                <button type="submit" class="btn btn-primary" style="padding:10px 16px;"><i class="ph ph-plus"></i></button>
+            </form>
+            {% else %}
+            <p style="font-size:13px;color:var(--text-muted);">Create a trip and add stops first.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bento-item col-span-12" style="text-align:center;padding:60px;"><p style="color:var(--text-muted);">No activities match your filters.</p></div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.wrapped-container {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: var(--bg-base); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    font-family: var(--font-main);
+}
+.slide {
+    position: absolute; width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(0.95); transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+    text-align: center; padding: 40px; pointer-events: none;
+}
+.slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+.slide.exit { opacity: 0; transform: scale(1.05); pointer-events: none; }
+
+.slide h1 { font-size: 5vw; margin-bottom: 20px; }
+.slide h2 { font-size: 3vw; margin-bottom: 40px; color: var(--accent-1); }
+
+.w-bento {
+    background: var(--surface-1); backdrop-filter: blur(20px);
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
+    padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+}
+
+.controls {
+    position: absolute; bottom: 40px; display: flex; gap: 20px; z-index: 10000;
+}
+</style>
+
+<div class="wrapped-container" id="wrappedApp">
+    <!-- Slide 1: Intro -->
+    <div id="slide-1" class="slide active">
+        <h1 class="text-gradient-cyan">Your Journey To<br>{{ trip.name }}</h1>
+        <p style="font-size: 24px;">Sit back and relive the memories.</p>
+    </div>
+
+    <!-- Slide 2: Stats -->
+    <div id="slide-2" class="slide">
+        <h2>By The Numbers</h2>
+        <div style="display: flex; gap: 40px; margin-top: 40px;">
+            <div class="w-bento">
+                <h1 style="color: var(--accent-1);">{{ stops|length }}</h1>
+                <p>Destinations</p>
+            </div>
+            <div class="w-bento">
+                <h1 style="color: var(--accent-2);">{{ activities|length }}</h1>
+                <p>Adventures</p>
+            </div>
+            <div class="w-bento">
+                <h1 style="color: var(--accent-3);">{{ total_days }}</h1>
+                <p>Days</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Top Activity -->
+    <div id="slide-3" class="slide">
+        <h2>Highlight Of The Trip</h2>
+        {% if activities %}
+        <div class="w-bento" style="max-width: 600px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">✨</div>
+            <h1 style="font-size: 32px; margin-bottom: 10px;">{{ activities[0].name }}</h1>
+            <p>An unforgettable experience worth every penny.</p>
+        </div>
+        {% else %}
+        <p>No activities added yet!</p>
+        {% endif %}
+    </div>
+
+    <!-- Slide 4: Budget Story -->
+    <div id="slide-4" class="slide">
+        <h2>The Budget Story</h2>
+        <div class="w-bento">
+            {% set ns = namespace(acts=0.0) %}
+            {% for a in activities %}{% if a.is_selected %}{% set ns.acts = ns.acts + (a.cost|float) %}{% endif %}{% endfor %}
+            <h1 class="text-gradient-orange">${{ "%.0f"|format(ns.acts) }}</h1>
+            <p>Spent on amazing activities!</p>
+        </div>
+    </div>
+
+    <!-- Slide 5: Memory Gallery (Placeholder) -->
+    <div id="slide-5" class="slide">
+        <h2>Memory Gallery</h2>
+        <div style="width: 80vw; height: 50vh; background: url('{{ trip.cover_photo }}') center/cover; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.2);"></div>
+    </div>
+
+    <!-- Slide 6: Outro -->
+    <div id="slide-6" class="slide">
+        <h1 class="text-gradient-cyan">Until Next Time</h1>
+        <p style="font-size: 24px;">Where to next?</p>
+        <div style="margin-top: 40px;">
+            <a href="{{ url_for('planner', trip_id=trip.id) }}" class="btn btn-primary" style="font-size: 20px; padding: 16px 32px;">Back to Planner</a>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button onclick="prevSlide()" class="btn btn-outline" id="prevBtn" style="display:none;"><i class="ph ph-caret-left"></i></button>
+        <button onclick="nextSlide()" class="btn btn-outline" id="nextBtn"><i class="ph ph-caret-right"></i></button>
+    </div>
+</div>
+
+<script>
+let current = 1;
+const total = 6;
+let timer;
+
+function showSlide(n) {
+    document.querySelectorAll('.slide').forEach((s, i) => {
+        if (i + 1 === n) { s.className = 'slide active'; }
+        else if (i + 1 < n) { s.className = 'slide exit'; }
+        else { s.className = 'slide'; }
+    });
+    document.getElementById('prevBtn').style.display = n === 1 ? 'none' : 'flex';
+    document.getElementById('nextBtn').style.display = n === total ? 'none' : 'flex';
+    resetTimer();
+}
+
+function nextSlide() { if(current < total) { current++; showSlide(current); } }
+function prevSlide() { if(current > 1) { current--; showSlide(current); } }
+
+function resetTimer() {
+    clearInterval(timer);
+    if(current < total) {
+        timer = setInterval(nextSlide, 5000);
+    }
+}
+
+document.getElementById('wrappedApp').addEventListener('click', (e) => {
+    if(!e.target.closest('button') && !e.target.closest('a')) {
+        nextSlide();
+    }
+});
+
+resetTimer();
+</script>
+{% endblock %}

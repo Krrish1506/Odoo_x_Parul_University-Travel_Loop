@@ -1,0 +1,33 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# Flask/Flask-SQLAlchemy
+instance/
+*.sqlite3
+*.db
+
+# Environment Variables
+.env
+.flaskenv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

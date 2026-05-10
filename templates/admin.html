@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<nav class="navbar animate-in">
+    <div class="nav-brand" onclick="window.location.href='{{ url_for('dashboard') }}'"><i class="ph-fill ph-planet text-gradient-cyan"></i><span>Traveloop</span></div>
+    <div><a href="{{ url_for('dashboard') }}" class="btn btn-outline"><i class="ph ph-arrow-left"></i> Dashboard</a></div>
+</nav>
+
+<div class="bento-grid animate-in stagger-1">
+    <div class="bento-item col-span-12" style="padding:40px;">
+        <h1 style="margin-bottom:8px;">Admin <span class="text-gradient-orange">Dashboard</span></h1>
+        <p>Monitor app adoption, popular cities, and user behavior.</p>
+    </div>
+
+    <div class="bento-item col-span-4" style="text-align:center;padding:40px;">
+        <i class="ph ph-users text-gradient-cyan" style="font-size:40px;margin-bottom:12px;"></i>
+        <h2 style="font-size:48px;">{{ total_users }}</h2>
+        <p style="text-transform:uppercase;font-size:11px;letter-spacing:2px;font-weight:700;">Total Users</p>
+    </div>
+    <div class="bento-item col-span-4" style="text-align:center;padding:40px;">
+        <i class="ph ph-suitcase text-gradient-orange" style="font-size:40px;margin-bottom:12px;"></i>
+        <h2 style="font-size:48px;">{{ total_trips }}</h2>
+        <p style="text-transform:uppercase;font-size:11px;letter-spacing:2px;font-weight:700;">Total Trips</p>
+    </div>
+    <div class="bento-item col-span-4" style="text-align:center;padding:40px;">
+        <i class="ph ph-lightning text-gradient-cyan" style="font-size:40px;margin-bottom:12px;"></i>
+        <h2 style="font-size:48px;">{{ total_acts }}</h2>
+        <p style="text-transform:uppercase;font-size:11px;letter-spacing:2px;font-weight:700;">Activities Logged</p>
+    </div>
+
+    <div class="bento-item col-span-6">
+        <h3 style="margin-bottom:24px;">Top Cities</h3>
+        <div style="width:100%;max-width:350px;margin:0 auto;"><canvas id="citiesChart"></canvas></div>
+    </div>
+    <div class="bento-item col-span-6">
+        <h3 style="margin-bottom:24px;">User Engagement</h3>
+        <table style="width:100%;border-collapse:collapse;">
+            <tr style="color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <th style="text-align:left;padding:12px;">User</th><th style="text-align:left;padding:12px;">Email</th><th style="text-align:right;padding:12px;">Trips</th>
+            </tr>
+            {% for u in users %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:12px;font-weight:600;">{{ u.name }}</td>
+                <td style="padding:12px;color:var(--text-muted);">{{ u.email }}</td>
+                <td style="padding:12px;text-align:right;"><span class="badge badge-cyan">{{ u.trips|length }}</span></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="bento-item col-span-12">
+        <h3 style="margin-bottom:24px;">Recent Trips</h3>
+        <table style="width:100%;border-collapse:collapse;">
+            <tr style="color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <th style="text-align:left;padding:12px;">Trip</th><th style="text-align:left;padding:12px;">User</th><th style="text-align:left;padding:12px;">Dates</th><th style="text-align:center;padding:12px;">Public</th>
+            </tr>
+            {% for t in trips %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:12px;font-weight:600;">{{ t.name }}</td>
+                <td style="padding:12px;color:var(--text-muted);">{{ t.owner.name }}</td>
+                <td style="padding:12px;color:var(--text-muted);">{{ t.start_date }} → {{ t.end_date }}</td>
+                <td style="padding:12px;text-align:center;">{% if t.is_public %}<span class="badge badge-cyan">Yes</span>{% else %}<span style="color:var(--text-muted);">No</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const labels = []; const data = [];
+    const colors = ['#38bdf8','#fbbf24','#a78bfa','#34d399','#f472b6','#fb923c'];
+    {% for c in top_cities %}
+    labels.push("{{ c[0] }}"); data.push({{ c[1] }});
+    {% endfor %}
+    if(data.length > 0) {
+        new Chart(document.getElementById('citiesChart'), {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0, hoverOffset: 10 }] },
+            options: { plugins: { legend: { position: 'bottom', labels: { color: '#f1f5f9', padding: 16, font: { family: 'Inter' } } } }, cutout: '65%' }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<nav class="navbar animate-in">
+    <div class="nav-brand" onclick="window.location.href='{{ url_for('dashboard') }}'"><i class="ph-fill ph-planet text-gradient-cyan"></i><span>Traveloop</span></div>
+    <div style="display:flex;gap:12px;">
+        <a href="{{ url_for('city_search') }}" class="btn btn-outline"><i class="ph ph-magnifying-glass"></i> City Search</a>
+        <a href="{{ url_for('activity_search') }}" class="btn btn-outline"><i class="ph ph-person-simple-walk"></i> Activities</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline"><i class="ph ph-arrow-left"></i> Dashboard</a>
+    </div>
+</nav>
+
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for c,m in messages %}<div style="padding:16px;border-radius:12px;margin-bottom:16px;background:rgba(255,255,255,0.05);color:{% if c=='error' %}#f87171{% else %}#4ade80{% endif %};">{{ m }}</div>{% endfor %}{% endif %}{% endwith %}
+
+<div class="bento-grid animate-in stagger-1">
+
+    <!-- ITINERARY BUILDER + VIEW SPLIT -->
+    <div class="bento-item col-span-5">
+        <h2 style="margin-bottom:8px;">Add <span class="text-gradient-cyan">Waypoint</span></h2>
+        <p style="margin-bottom:24px;">Search and lock a city to your trip route.</p>
+        <form action="{{ url_for('add_stop') }}" method="POST">
+            <input type="hidden" name="trip_id" value="{{ trip.id }}">
+            <div class="input-group">
+                <label>City Name</label>
+                <i class="ph ph-crosshair"></i>
+                <input type="text" name="city_name" id="cityInput" placeholder="e.g. Paris, France" required autocomplete="off">
+            </div>
+            <!-- Quick pick city buttons -->
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+                {% for c in ['Paris','Bali','Tokyo','New York','Kyoto','Santorini'] %}
+                <button type="button" class="badge badge-cyan" style="cursor:pointer;border:none;font-size:13px;" onclick="document.getElementById('cityInput').value='{{c}}'">{{ c }}</button>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary w-full">Lock Coordinate</button>
+        </form>
+
+        {% if stops %}
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:32px 0;">
+        <h3 style="margin-bottom:20px;">Add Activity</h3>
+        <form action="{{ url_for('add_activity') }}" method="POST">
+            <input type="hidden" name="trip_id" value="{{ trip.id }}">
+            <div class="input-group">
+                <label>Stop</label>
+                <i class="ph ph-map-pin"></i>
+                <select name="stop_id" required>
+                    {% for s in stops %}<option value="{{ s.id }}">{{ s.city_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Activity Name</label>
+                <i class="ph ph-clipboard-text"></i>
+                <input type="text" name="name" placeholder="e.g. Eiffel Tower" required>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="input-group">
+                    <label>Type</label>
+                    <i class="ph ph-tag"></i>
+                    <select name="type">
+                        {% for t in ['Sightseeing','Food','Adventure','Culture','Wellness','Entertainment','Leisure'] %}
+                        <option>{{ t }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Cost (USD)</label>
+                    <i class="ph ph-currency-dollar"></i>
+                    <input type="number" name="cost" placeholder="0" min="0">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="input-group">
+                    <label>Duration</label>
+                    <i class="ph ph-timer"></i>
+                    <input type="text" name="duration" placeholder="e.g. 2h">
+                </div>
+                <div class="input-group">
+                    <label>Time</label>
+                    <i class="ph ph-clock"></i>
+                    <input type="time" name="time">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-orange w-full">Log Activity</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- TIMELINE / ITINERARY VIEW -->
+    <div class="bento-item col-span-7">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
+            <h2><span class="text-gradient-cyan">Timeline</span> View</h2>
+            <div style="display:flex;gap:8px;">
+                <button class="tab-btn active" id="viewList" onclick="switchView('list')"><i class="ph ph-list-dashes"></i> List</button>
+                <button class="tab-btn" id="viewCal" onclick="switchView('calendar')"><i class="ph ph-calendar"></i> Calendar</button>
+            </div>
+        </div>
+
+        <div id="listView">
+        {% if not stops %}
+            <div style="text-align:center;padding:60px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:24px;">
+                <i class="ph ph-map-trifold" style="font-size:48px;color:var(--text-muted);"></i>
+                <p style="margin-top:16px;">No waypoints yet — add a city to begin.</p>
+            </div>
+        {% else %}
+            <div class="timeline">
+            {% for stop in stops %}
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div style="padding:24px;background:rgba(0,0,0,0.25);border-radius:20px;border:1px solid rgba(255,255,255,0.05);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <h3 style="color:var(--accent-1);">{{ stop.city_name }}</h3>
+                            <span class="badge badge-cyan">Stop {{ loop.index }}</span>
+                        </div>
+                        {% set ns = namespace(has=false) %}
+                        {% for act in activities %}{% if act.stop_id == stop.id %}{% set ns.has = true %}
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:8px;border-left:3px solid var(--accent-2);">
+                            <div>
+                                <span style="font-weight:600;">{{ act.name }}</span>
+                                {% if act.time %}<span style="font-size:12px;color:var(--text-muted);margin-left:10px;"><i class="ph ph-clock"></i> {{ act.time }}</span>{% endif %}
+                                {% if act.duration %}<span style="font-size:12px;color:var(--text-muted);margin-left:8px;"><i class="ph ph-timer"></i> {{ act.duration }}</span>{% endif %}
+                                {% if act.type %}<span class="badge badge-orange" style="margin-left:8px;font-size:11px;">{{ act.type }}</span>{% endif %}
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span class="badge badge-orange">${{ act.cost }}</span>
+                                <form action="{{ url_for('delete_activity', act_id=act.id, trip_id=trip.id) }}" method="POST">
+                                    <button type="submit" style="background:none;border:none;cursor:pointer;color:#f87171;font-size:18px;"><i class="ph ph-trash"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}{% endfor %}
+                        {% if not ns.has %}<p style="font-size:14px;color:var(--text-muted);">No activities yet for this city.</p>{% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
+        {% endif %}
+        </div>
+
+        <!-- Calendar View (day-wise grid) -->
+        <div id="calView" style="display:none;">
+            <p style="color:var(--text-muted);margin-bottom:24px;">Day-wise calendar grid for {{ trip.start_date }} → {{ trip.end_date }}</p>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
+                {% for day in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
+                <div style="text-align:center;font-size:12px;font-weight:700;color:var(--text-muted);padding:8px;">{{ day }}</div>
+                {% endfor %}
+                {% for stop in stops %}
+                <div style="background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.3);border-radius:12px;padding:12px;min-height:80px;">
+                    <p style="font-size:12px;color:var(--accent-1);font-weight:700;">{{ stop.city_name }}</p>
+                    {% for act in activities %}{% if act.stop_id == stop.id %}<p style="font-size:11px;color:var(--text-muted);margin-top:4px;">• {{ act.name }}</p>{% endif %}{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function switchView(v) {
+    document.getElementById('listView').style.display = v==='list'?'block':'none';
+    document.getElementById('calView').style.display  = v==='calendar'?'block':'none';
+    document.getElementById('viewList').className = 'tab-btn'+(v==='list'?' active':'');
+    document.getElementById('viewCal').className  = 'tab-btn'+(v==='calendar'?' active':'');
+}
+</script>
+{% endblock %}

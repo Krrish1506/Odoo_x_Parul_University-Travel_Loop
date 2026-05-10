@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<nav class="navbar animate-in">
+    <div class="nav-brand" onclick="window.location.href='{{ url_for('dashboard') }}'"><i class="ph-fill ph-planet text-gradient-cyan"></i><span>Traveloop</span></div>
+    <div style="display:flex;gap:12px;">
+        <a href="{{ url_for('activity_search') }}" class="btn btn-outline"><i class="ph ph-person-simple-walk"></i> Activities</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline"><i class="ph ph-arrow-left"></i> Dashboard</a>
+    </div>
+</nav>
+
+<div class="bento-grid animate-in stagger-1">
+    <div class="bento-item col-span-12" style="padding:40px;">
+        <h1 style="margin-bottom:8px;">City <span class="text-gradient-cyan">Search</span></h1>
+        <p style="margin-bottom:32px;">Discover destinations by country, cost index, and popularity — then add them to your trip.</p>
+        <form method="GET" action="{{ url_for('city_search') }}" style="display:flex;gap:16px;flex-wrap:wrap;">
+            <div style="flex:2;min-width:250px;">
+                <div class="input-group" style="margin-bottom:0;"><label>Search</label><i class="ph ph-magnifying-glass"></i>
+                    <input type="text" name="q" value="{{ q }}" placeholder="City or country name...">
+                </div>
+            </div>
+            <div style="flex:1;min-width:180px;">
+                <div class="input-group" style="margin-bottom:0;"><label>Region / Country</label><i class="ph ph-globe-hemisphere-east"></i>
+                    <select name="region">
+                        <option value="">All Regions</option>
+                        {% for r in regions %}<option value="{{ r }}" {% if region == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex;align-items:flex-end;"><button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass"></i> Search</button></div>
+        </form>
+    </div>
+
+    {% for city in results %}
+    <div class="bento-item col-span-4 animate-in" style="padding:0;animation-delay:{{ loop.index0 * 0.05 }}s;">
+        <div style="height:180px;background-image:url('{{ city.img }}');background-size:cover;background-position:center;position:relative;border-radius:24px 24px 0 0;">
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(2,6,23,1) 0%,transparent 60%);border-radius:24px 24px 0 0;"></div>
+            <div class="badge badge-cyan" style="position:absolute;top:16px;left:16px;">{{ city.cost }}</div>
+            <div class="badge badge-orange" style="position:absolute;top:16px;right:16px;">{{ city.pop }}</div>
+        </div>
+        <div style="padding:24px;margin-top:-20px;position:relative;">
+            <h3 style="margin-bottom:4px;">{{ city.name }}</h3>
+            <p style="font-size:14px;margin-bottom:20px;"><i class="ph ph-flag"></i> {{ city.country }}</p>
+            {% if trips %}
+            <form action="{{ url_for('add_stop') }}" method="POST" style="display:flex;gap:8px;">
+                <select name="trip_id" style="flex:1;padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:white;">
+                    {% for t in trips %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+                </select>
+                <input type="hidden" name="city_name" value="{{ city.name.split(',')[0] }}">
+                <button type="submit" class="btn btn-primary" style="padding:10px 20px;"><i class="ph ph-plus"></i> Add</button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('create_trip') }}" class="btn btn-outline w-full">Create a trip first</a>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bento-item col-span-12" style="text-align:center;padding:60px;"><p style="color:var(--text-muted);">No cities found matching your search.</p></div>
+    {% endfor %}
+</div>
+{% endblock %}

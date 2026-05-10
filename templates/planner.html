@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<nav class="navbar animate-in">
+    <div class="nav-brand" onclick="window.location.href='{{ url_for('dashboard') }}'"><i class="ph-fill ph-planet text-gradient-cyan"></i><span>Traveloop</span></div>
+    <div><a href="{{ url_for('dashboard') }}" class="btn btn-outline"><i class="ph ph-arrow-left"></i> My Trips</a></div>
+</nav>
+
+<!-- Hero Banner with Trip Cover Image -->
+<div class="bento-item animate-in" style="padding:0;overflow:hidden;margin-bottom:24px;">
+    <div style="position:relative;min-height:280px;background-image:url('{{ trip.cover_photo }}');background-size:cover;background-position:center;">
+        <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(15,25,35,0.95) 35%,rgba(15,25,35,0.4));"></div>
+        <div style="position:relative;padding:48px;z-index:2;display:flex;flex-direction:column;justify-content:flex-end;min-height:280px;">
+            <h1 class="text-gradient-cyan" style="font-size:44px;">{{ trip.name }}</h1>
+            <p style="color:#cbd5e1;font-size:16px;margin-top:8px;"><i class="ph ph-calendar"></i> {{ trip.start_date }} — {{ trip.end_date }}</p>
+            {% if trip.description %}<p style="color:#94a3b8;margin-top:8px;max-width:500px;">{{ trip.description }}</p>{% endif %}
+        </div>
+        <div style="position:absolute;top:24px;right:24px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;z-index:3;">
+            <a href="{{ url_for('wrapped', trip_id=trip.id) }}" class="btn" style="background: linear-gradient(90deg, #9D4EDD, #ff003c); color: white; border: none;"><i class="ph-fill ph-film-strip"></i> View Wrapped</a>
+            <button onclick="exportPDF()" class="btn btn-outline" style="background: rgba(0,0,0,0.5);"><i class="ph ph-file-pdf"></i> PDF</button>
+            <button onclick="exportPPT()" class="btn btn-outline" style="background: rgba(0,0,0,0.5);"><i class="ph ph-presentation-chart"></i> PPT</button>
+            <form action="{{ url_for('toggle_public', tid=trip.id) }}" method="POST">
+                <button class="btn {% if trip.is_public %}btn-primary{% else %}btn-outline{% endif %}" style="padding:10px 20px;">
+                    <i class="ph ph-globe"></i> {% if trip.is_public %}Public{% else %}Make Public{% endif %}
+                </button>
+            </form>
+            {% if trip.is_public %}<a href="/shared/{{ trip.share_id }}" target="_blank" class="btn btn-outline" style="padding:10px 20px;"><i class="ph ph-link"></i> Share</a>{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs-header animate-in stagger-1" style="margin-bottom:24px;">
+    <button class="tab-btn active" onclick="openTab('plan',this)"><i class="ph ph-map-trifold"></i> Plan Route</button>
+    <button class="tab-btn" onclick="openTab('itinerary',this)"><i class="ph ph-eye"></i> Full Itinerary</button>
+    <button class="tab-btn" onclick="openTab('budget',this)"><i class="ph ph-chart-pie-slice"></i> Budget</button>
+    <button class="tab-btn" onclick="openTab('checklist',this)"><i class="ph ph-check-square-offset"></i> Checklist</button>
+    <button class="tab-btn" onclick="openTab('notes',this)"><i class="ph ph-notebook"></i> Journal</button>
+</div>
+
+<!-- ═══ PLAN ROUTE TAB ═══ -->
+<div id="plan" class="tab-pane">
+<div class="bento-grid">
+    <div class="bento-item col-span-4">
+        <h3 style="margin-bottom:8px;">Add <span class="text-gradient-cyan">Destination</span></h3>
+        <p style="margin-bottom:24px;font-size:14px;">Pick a city — costs & activities fill automatically.</p>
+        <form action="{{ url_for('add_city') }}" method="POST">
+            <input type="hidden" name="trip_id" value="{{ trip.id }}">
+            <div class="input-group"><label>City</label><i class="ph ph-map-pin"></i>
+                <select name="city_name" required>
+                    {% for cname, cdata in cities.items() %}
+                    <option value="{{ cname }}">{{ cname }}, {{ cdata.country }} — {{ cdata.cost_index }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="input-group"><label>Days to spend</label><i class="ph ph-calendar"></i>
+                <input type="number" name="num_days" value="2" min="1" max="14">
+            </div>
+            <button type="submit" class="btn btn-primary w-full"><i class="ph ph-plus-circle"></i> Add to Route</button>
+        </form>
+    </div>
+
+    <!-- Route Cards with City Images -->
+    <div class="bento-item col-span-8">
+        <h2 style="margin-bottom:24px;">Your <span class="text-gradient-orange">Route</span></h2>
+        {% if not stops %}
+        <div style="text-align:center;padding:60px;border:2px dashed rgba(255,255,255,0.08);border-radius:20px;">
+            <i class="ph ph-airplane-tilt" style="font-size:56px;color:var(--text-muted);"></i>
+            <p style="margin-top:16px;">Select a city to start planning.</p>
+        </div>
+        {% else %}
+        <div style="display:flex;gap:16px;overflow-x:auto;padding-bottom:16px;">
+            {% for stop in stops %}
+            {% set cd = cities.get(stop.city_name, {}) %}
+            <div style="min-width:260px;background:rgba(0,0,0,0.3);border-radius:20px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;flex-shrink:0;">
+                <div style="height:130px;background-image:url('{{ cd.get('img','https://images.unsplash.com/photo-1488646953014-c8bfbc14a7a0?w=600&q=80') }}');background-size:cover;background-position:center;position:relative;">
+                    <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(15,25,35,0.95) 10%,transparent 70%);"></div>
+                    <div style="position:absolute;bottom:12px;left:16px;">
+                        <h3 style="font-size:20px;color:#fff;">{{ stop.city_name }}</h3>
+                        <span style="font-size:12px;color:var(--accent-2);">{{ stop.num_days }} days · {{ cd.get('country','') }}</span>
+                    </div>
+                    <span class="badge badge-cyan" style="position:absolute;top:10px;right:10px;font-size:10px;">Stop {{ loop.index }}</span>
+                </div>
+                <div style="padding:16px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;font-size:12px;">
+                        <div style="background:rgba(255,255,255,0.04);padding:8px;border-radius:8px;text-align:center;">
+                            <span style="color:var(--text-muted);display:block;font-size:10px;">🏨 Hotel</span><strong>${{ stop.hotel_cost }}</strong>/n
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);padding:8px;border-radius:8px;text-align:center;">
+                            <span style="color:var(--text-muted);display:block;font-size:10px;">🍽️ Food</span><strong>${{ stop.food_cost }}</strong>/d
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);padding:8px;border-radius:8px;text-align:center;">
+                            <span style="color:var(--text-muted);display:block;font-size:10px;">🚌 Trans</span><strong>${{ stop.transport_cost }}</strong>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        <form action="{{ url_for('update_days', stop_id=stop.id) }}" method="POST" style="display:flex;gap:4px;flex:1;">
+                            <input type="hidden" name="trip_id" value="{{ trip.id }}">
+                            <input type="number" name="num_days" value="{{ stop.num_days }}" min="1" max="14" style="width:50px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:white;text-align:center;font-size:14px;">
+                            <button type="submit" class="btn btn-outline" style="padding:8px 10px;font-size:11px;">Save</button>
+                        </form>
+                        <form action="{{ url_for('remove_stop', stop_id=stop.id, trip_id=trip.id) }}" method="POST">
+                            <button type="submit" class="btn btn-outline" style="padding:8px 10px;color:#f87171;border-color:rgba(248,113,113,0.2);"><i class="ph ph-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Activities Per Stop -->
+    {% for stop in stops %}
+    {% set cd = cities.get(stop.city_name, {}) %}
+    <div class="bento-item col-span-12">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:16px;">
+                <div style="width:48px;height:48px;border-radius:14px;background-image:url('{{ cd.get('img','') }}');background-size:cover;background-position:center;flex-shrink:0;border:2px solid rgba(255,255,255,0.1);"></div>
+                <h3>{{ stop.city_name }} — Activities</h3>
+            </div>
+            <span class="badge badge-orange">{{ stop.num_days }} days</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+            {% for act in activities %}{% if act.stop_id == stop.id %}
+            <div style="background:{% if act.is_selected %}rgba(56,189,248,0.06){% else %}rgba(255,255,255,0.02){% endif %};border:1px solid {% if act.is_selected %}rgba(56,189,248,0.2){% else %}rgba(255,255,255,0.05){% endif %};border-radius:16px;padding:20px;display:flex;justify-content:space-between;align-items:center;transition:all 0.3s;">
+                <div>
+                    <p style="font-weight:700;{% if not act.is_selected %}opacity:0.4;text-decoration:line-through;{% endif %}">{{ act.name }}</p>
+                    <div style="display:flex;gap:8px;margin-top:8px;">
+                        <span class="badge badge-orange" style="font-size:11px;">{{ act.type }}</span>
+                        {% if act.duration %}<span style="font-size:12px;color:var(--text-muted);"><i class="ph ph-timer"></i> {{ act.duration }}</span>{% endif %}
+                        {% if act.time %}<span style="font-size:12px;color:var(--text-muted);"><i class="ph ph-clock"></i> {{ act.time }}</span>{% endif %}
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-weight:800;font-size:18px;color:var(--accent-2);">${{ act.cost }}</span>
+                    <form action="{{ url_for('toggle_activity', act_id=act.id) }}" method="POST">
+                        <button type="submit" style="background:none;border:none;cursor:pointer;font-size:28px;color:{% if act.is_selected %}var(--accent-1){% else %}var(--text-muted){% endif %};">
+                            {% if act.is_selected %}<i class="ph-fill ph-toggle-right"></i>{% else %}<i class="ph ph-toggle-left"></i>{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}{% endfor %}
+
+            <!-- Manual Add Card -->
+            <div style="background:rgba(255,255,255,0.02);border:2px dashed rgba(255,255,255,0.1);border-radius:16px;padding:20px;">
+                <p style="font-weight:700;margin-bottom:12px;font-size:14px;color:var(--accent-3);"><i class="ph ph-plus-circle"></i> Add Custom Activity</p>
+                <form action="{{ url_for('add_manual_activity') }}" method="POST" style="display:flex;flex-direction:column;gap:10px;">
+                    <input type="hidden" name="trip_id" value="{{ trip.id }}">
+                    <input type="hidden" name="stop_id" value="{{ stop.id }}">
+                    <input type="text" name="name" placeholder="Activity name..." required style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
+                    <div style="display:flex;gap:8px;">
+                        <input type="number" name="cost" placeholder="Cost $" min="0" style="flex:1;min-width:0;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
+                        <input type="text" name="duration" placeholder="e.g. 2h" style="flex:1;min-width:0;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;">
+                    </div>
+                    <button type="submit" class="btn btn-outline" style="padding:10px;font-size:13px;"><i class="ph ph-plus"></i> Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+</div>
+
+<!-- ═══ ITINERARY VIEW ═══ -->
+<div id="itinerary" class="tab-pane" style="display:none;">
+<div class="bento-item">
+    <h2 style="margin-bottom:32px;">Complete <span class="text-gradient-cyan">Itinerary</span></h2>
+    {% for stop in stops %}
+    {% set cd = cities.get(stop.city_name, {}) %}
+    <div style="margin-bottom:40px;padding:0;border-radius:20px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;">
+        <div style="height:120px;background-image:url('{{ cd.get('img','') }}');background-size:cover;background-position:center;position:relative;">
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(15,25,35,1) 15%,transparent 80%);"></div>
+            <div style="position:absolute;bottom:16px;left:24px;display:flex;align-items:center;gap:12px;">
+                <h3 style="color:#fff;font-size:28px;">{{ stop.city_name }}, {{ cd.get('country','') }}</h3>
+                <span class="badge badge-cyan">{{ stop.num_days }} days</span>
+            </div>
+        </div>
+        <div style="padding:24px;">
+            <table style="width:100%;border-collapse:collapse;">
+                <tr style="color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <th style="text-align:left;padding:10px;">Activity</th><th style="padding:10px;">Type</th><th style="padding:10px;">Time</th><th style="padding:10px;">Duration</th><th style="text-align:right;padding:10px;">Cost</th>
+                </tr>
+                {% for act in activities %}{% if act.stop_id == stop.id and act.is_selected %}
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:12px;font-weight:600;">{{ act.name }}</td>
+                    <td style="padding:12px;text-align:center;"><span class="badge badge-orange" style="font-size:11px;">{{ act.type }}</span></td>
+                    <td style="padding:12px;text-align:center;color:var(--text-muted);">{{ act.time or '-' }}</td>
+                    <td style="padding:12px;text-align:center;color:var(--text-muted);">{{ act.duration or '-' }}</td>
+                    <td style="padding:12px;text-align:right;font-weight:700;">${{ act.cost }}</td>
+                </tr>
+                {% endif %}{% endfor %}
+            </table>
+        </div>
+    </div>
+    {% else %}<p style="text-align:center;padding:40px;color:var(--text-muted);">Add cities to see your itinerary.</p>
+    {% endfor %}
+</div>
+</div>
+
+<!-- ═══ BUDGET TAB ═══ -->
+<div id="budget" class="tab-pane" style="display:none;">
+<div class="bento-grid">
+    {% set ns = namespace(hotel=0.0,food=0.0,transport=0.0,acts=0.0,days=0) %}
+    {% for s in stops %}
+        {% set ns.hotel = ns.hotel + (s.hotel_cost|float) * s.num_days %}
+        {% set ns.food = ns.food + (s.food_cost|float) * s.num_days %}
+        {% set ns.transport = ns.transport + (s.transport_cost|float) %}
+        {% set ns.days = ns.days + s.num_days %}
+    {% endfor %}
+    {% for a in activities %}{% if a.is_selected %}{% set ns.acts = ns.acts + (a.cost|float) %}{% endif %}{% endfor %}
+    {% set total = ns.hotel + ns.food + ns.transport + ns.acts %}
+
+    <div class="bento-item col-span-3" style="text-align:center;padding:32px;">
+        <p style="font-size:28px;margin-bottom:4px;">🏨</p>
+        <h2 style="font-size:32px;">${{ "%.0f"|format(ns.hotel) }}</h2>
+        <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;">Hotels</p>
+    </div>
+    <div class="bento-item col-span-3" style="text-align:center;padding:32px;">
+        <p style="font-size:28px;margin-bottom:4px;">🍽️</p>
+        <h2 style="font-size:32px;">${{ "%.0f"|format(ns.food) }}</h2>
+        <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;">Food</p>
+    </div>
+    <div class="bento-item col-span-3" style="text-align:center;padding:32px;">
+        <p style="font-size:28px;margin-bottom:4px;">🚌</p>
+        <h2 style="font-size:32px;">${{ "%.0f"|format(ns.transport) }}</h2>
+        <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;">Transport</p>
+    </div>
+    <div class="bento-item col-span-3" style="text-align:center;padding:32px;">
+        <p style="font-size:28px;margin-bottom:4px;">🎯</p>
+        <h2 style="font-size:32px;">${{ "%.0f"|format(ns.acts) }}</h2>
+        <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;">Activities</p>
+    </div>
+
+    <div class="bento-item col-span-4" style="text-align:center;padding:48px;">
+        <p style="font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);">Total Estimated Budget</p>
+        <h1 class="text-gradient-orange" style="font-size:64px;margin:16px 0;">${{ "%.0f"|format(total) }}</h1>
+        {% if ns.days > 0 %}<p>≈ ${{ "%.0f"|format(total / ns.days) }} / day · {{ ns.days }} days</p>{% endif %}
+        {% if total > 2000 %}<div style="margin-top:20px;padding:12px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:12px;color:var(--accent-2);font-size:14px;"><i class="ph ph-warning"></i> High budget — toggle off some activities to save.</div>{% endif %}
+    </div>
+    <div class="bento-item col-span-4" style="display:flex;align-items:center;justify-content:center;">
+        <div style="width:100%;max-width:260px;"><canvas id="pie1"></canvas></div>
+    </div>
+    <div class="bento-item col-span-4" style="display:flex;align-items:center;justify-content:center;">
+        <div style="width:100%;max-width:260px;"><canvas id="bar1"></canvas></div>
+    </div>
+</div>
+</div>
+
+<!-- ═══ CHECKLIST TAB ═══ -->
+<div id="checklist" class="tab-pane" style="display:none;">
+<div class="bento-grid">
+    <div class="bento-item col-span-8">
+        <div style="display:flex;justify-content:space-between;margin-bottom:24px;">
+            <h2>Packing <span class="text-gradient-cyan">Checklist</span></h2>
+            <form action="{{ url_for('reset_checklist', tid=trip.id) }}" method="POST"><button class="btn btn-outline" style="padding:8px 16px;font-size:13px;"><i class="ph ph-arrow-counter-clockwise"></i> Reset</button></form>
+        </div>
+        {% set cats = [] %}{% for item in checklist %}{% if item.category not in cats %}{% set _ = cats.append(item.category) %}{% endif %}{% endfor %}
+        {% for cat in cats %}
+        <p style="font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--accent-3);font-weight:700;margin:20px 0 12px;"><i class="ph ph-folder"></i> {{ cat }}</p>
+        {% for item in checklist %}{% if item.category == cat %}
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid rgba(255,255,255,0.04);">
+            <form action="{{ url_for('toggle_checklist', item_id=item.id) }}" method="POST" style="margin:0;"><button type="submit" style="background:none;border:none;cursor:pointer;font-size:22px;color:{% if item.is_packed %}var(--accent-3){% else %}var(--text-muted){% endif %};">{% if item.is_packed %}<i class="ph-fill ph-check-circle"></i>{% else %}<i class="ph ph-circle"></i>{% endif %}</button></form>
+            <span style="flex:1;{% if item.is_packed %}text-decoration:line-through;color:var(--text-muted);{% endif %}">{{ item.item_name }}</span>
+            <form action="{{ url_for('delete_checklist', iid=item.id, tid=trip.id) }}" method="POST" style="margin:0;"><button type="submit" style="background:none;border:none;cursor:pointer;color:#f87171;"><i class="ph ph-x"></i></button></form>
+        </div>
+        {% endif %}{% endfor %}
+        {% endfor %}
+        {% if not checklist %}<p style="text-align:center;color:var(--text-muted);padding:40px;">No items yet.</p>{% endif %}
+    </div>
+    <div class="bento-item col-span-4">
+        <h3 style="margin-bottom:20px;">Add Item</h3>
+        <form action="{{ url_for('add_checklist') }}" method="POST">
+            <input type="hidden" name="trip_id" value="{{ trip.id }}">
+            <div class="input-group"><label>Item</label><i class="ph ph-package"></i><input type="text" name="item_name" required placeholder="Passport"></div>
+            <div class="input-group"><label>Category</label><i class="ph ph-folder"></i><select name="category">{% for c in ['Clothing','Documents','Electronics','Toiletries','Medicine','General'] %}<option>{{ c }}</option>{% endfor %}</select></div>
+            <button type="submit" class="btn btn-primary w-full">Add</button>
+        </form>
+    </div>
+</div>
+</div>
+
+<!-- ═══ NOTES TAB ═══ -->
+<div id="notes" class="tab-pane" style="display:none;">
+<div class="bento-grid">
+    <div class="bento-item col-span-5">
+        <h3 style="margin-bottom:20px;">New <span class="text-gradient-orange">Note</span></h3>
+        <form action="{{ url_for('add_note') }}" method="POST">
+            <input type="hidden" name="trip_id" value="{{ trip.id }}">
+            <textarea name="content" rows="5" placeholder="Hotel check-in 3PM, call driver..." required style="width:100%;padding:20px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.3);color:white;resize:vertical;margin-bottom:20px;outline:none;"></textarea>
+            <button type="submit" class="btn btn-primary w-full">Save</button>
+        </form>
+    </div>
+    <div class="col-span-7" style="display:flex;flex-direction:column;gap:12px;">
+        {% for n in notes %}
+        <div class="bento-item" style="padding:20px;border-left:4px solid var(--accent-3);">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:12px;color:var(--accent-3);"><i class="ph ph-clock"></i> {{ n.date_added }}</span>
+                <form action="{{ url_for('delete_note', nid=n.id, tid=trip.id) }}" method="POST" style="margin:0;"><button type="submit" style="background:none;border:none;cursor:pointer;color:#f87171;font-size:13px;"><i class="ph ph-trash"></i></button></form>
+            </div>
+            <p style="white-space:pre-wrap;">{{ n.content }}</p>
+        </div>
+        {% else %}<div class="bento-item" style="padding:60px;text-align:center;"><p style="color:var(--text-muted);">No notes yet.</p></div>{% endfor %}
+    </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS/libs/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS/dist/pptxgen.min.js"></script>
+
+<script>
+function openTab(id,btn){document.querySelectorAll('.tab-pane').forEach(t=>t.style.display='none');document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById(id).style.display='block';btn.classList.add('active');}
+document.addEventListener('DOMContentLoaded',function(){
+    var cats=['Hotels','Food','Transport','Activities'];
+    var vals=[{{ "%.0f"|format(ns.hotel) }},{{ "%.0f"|format(ns.food) }},{{ "%.0f"|format(ns.transport) }},{{ "%.0f"|format(ns.acts) }}];
+    var cols=['#38bdf8','#fbbf24','#a78bfa','#34d399'];
+    if(vals.reduce((a,b)=>a+b,0)>0){
+        new Chart(document.getElementById('pie1'),{type:'doughnut',data:{labels:cats,datasets:[{data:vals,backgroundColor:cols,borderWidth:0,hoverOffset:10}]},options:{plugins:{legend:{position:'bottom',labels:{color:'#f1f5f9',padding:16,font:{family:'Inter'}}}},cutout:'68%'}});
+        new Chart(document.getElementById('bar1'),{type:'bar',data:{labels:cats,datasets:[{data:vals,backgroundColor:cols,borderRadius:8,borderSkipped:false}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#94a3b8',callback:v=>'$'+v},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#94a3b8'},grid:{display:false}}}}});
+    }
+});
+
+const tripData = {
+    name: "{{ trip.name }}",
+    date: "{{ trip.start_date }} — {{ trip.end_date }}",
+    stops: [{% for stop in stops %}{ city: "{{ stop.city_name }}", days: {{ stop.num_days }} },{% endfor %}],
+    activities: [{% for a in activities %}{% if a.is_selected %}{ name: "{{ a.name }}", cost: {{ a.cost }}, duration: "{{ a.duration }}" },{% endif %}{% endfor %}]
+};
+
+function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text(`TravelLoop Itinerary: ${tripData.name}`, 20, 30);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Dates: ${tripData.date}`, 20, 40);
+    
+    let y = 60;
+    doc.setFont("helvetica", "bold");
+    doc.text("Destinations:", 20, y);
+    doc.setFont("helvetica", "normal");
+    tripData.stops.forEach((s, i) => { y += 10; doc.text(`${i+1}. ${s.city} (${s.days} days)`, 25, y); });
+
+    y += 20;
+    doc.setFont("helvetica", "bold");
+    doc.text("Activities:", 20, y);
+    doc.setFont("helvetica", "normal");
+    tripData.activities.forEach((a, i) => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        y += 10;
+        doc.text(`- ${a.name} ($${a.cost}) [${a.duration || '-'}]`, 25, y);
+    });
+    doc.save(`${tripData.name.replace(/\s+/g,'_')}_Itinerary.pdf`);
+}
+
+function exportPPT() {
+    let pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_WIDE';
+    
+    // Cover Slide
+    let slide1 = pptx.addSlide();
+    slide1.background = { color: '0D1B2A' };
+    slide1.addText(`TravelLoop: ${tripData.name}`, { x:1, y:2.5, w:8, fontSize:44, color:'38BDF8', bold:true, align:'center' });
+    slide1.addText(tripData.date, { x:1, y:3.8, w:8, fontSize:24, color:'F1F5F9', align:'center' });
+
+    // Stops Slide
+    let slide2 = pptx.addSlide();
+    slide2.background = { color: 'F8FAFC' };
+    slide2.addText("Destinations", { x:0.5, y:0.5, fontSize:32, color:'0D1B2A', bold:true });
+    let stopsList = tripData.stops.map(s => ({ text: `${s.city} (${s.days} days)` }));
+    if(stopsList.length) slide2.addText(stopsList, { x:0.5, y:1.5, fontSize:20, color:'475569', bullet:true });
+
+    // Activities Slide
+    let slide3 = pptx.addSlide();
+    slide3.background = { color: 'F8FAFC' };
+    slide3.addText("Planned Activities", { x:0.5, y:0.5, fontSize:32, color:'0D1B2A', bold:true });
+    let actsList = tripData.activities.map(a => ({ text: `${a.name} - $${a.cost} [${a.duration || '-'}]` }));
+    if(actsList.length) slide3.addText(actsList, { x:0.5, y:1.5, fontSize:18, color:'475569', bullet:true });
+
+    pptx.writeFile({ fileName: `${tripData.name.replace(/\s+/g,'_')}_Itinerary.pptx` });
+}
+</script>
+{% endblock %}

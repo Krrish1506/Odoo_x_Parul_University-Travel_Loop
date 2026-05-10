@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+
+<div class="mesh-bg"></div>
+
+<div class="app-container" style="display: flex; flex-wrap: wrap; gap: 60px; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px;">
+    
+    <!-- Hero Section -->
+    <div style="flex: 1; min-width: 300px; max-width: 500px;" class="animate-in">
+        <div style="display: inline-flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 8px 16px; background: rgba(14, 165, 233, 0.1); border-radius: 100px; color: var(--accent-1); font-weight: 600;">
+            <i class="ph-fill ph-planet"></i> Traveloop AI
+        </div>
+        <h1 style="font-size: 56px; line-height: 1.1; margin-bottom: 24px; color: var(--text-main);">
+            Plan. Explore.<br><span style="color: var(--accent-1);">Relive.</span>
+        </h1>
+        <p style="font-size: 20px; color: var(--text-muted); margin-bottom: 32px; line-height: 1.6;">
+            Your personal AI-powered trip planner. Create beautiful itineraries, track budgets seamlessly, and generate cinematic memory replays of your adventures.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; font-weight: 500;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--surface-1); display: flex; align-items: center; justify-content: center; color: var(--accent-2);"><i class="ph-fill ph-check"></i></div> Auto-Budgeting & Insights
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; font-weight: 500;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--surface-1); display: flex; align-items: center; justify-content: center; color: var(--accent-2);"><i class="ph-fill ph-check"></i></div> Dynamic Travel Themes
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; font-weight: 500;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--surface-1); display: flex; align-items: center; justify-content: center; color: var(--accent-2);"><i class="ph-fill ph-check"></i></div> Cinematic Memory Replay
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Card -->
+    <div class="bento-item animate-in" style="width: 100%; max-width: 440px; padding: 48px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.05);">
+        <h2 style="margin-bottom: 8px;">Welcome Back</h2>
+        <p style="margin-bottom: 32px; color: var(--text-muted);">Log in to access your itineraries.</p>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div style="margin-bottom: 24px;">
+              {% for category, message in messages %}
+                <div style="padding: 14px 18px; border-radius: 12px; font-size: 14px; margin-bottom: 8px; text-align:left;
+                  background: {% if category == 'error' %}rgba(239,68,68,0.1){% else %}rgba(16,185,129,0.1){% endif %};
+                  border: 1px solid {% if category == 'error' %}rgba(239,68,68,0.2){% else %}rgba(16,185,129,0.2){% endif %};
+                  color: {% if category == 'error' %}#ef4444{% else %}#10b981{% endif %};">
+                  <i class="ph {% if category == 'error' %}ph-warning-circle{% else %}ph-check-circle{% endif %}" style="margin-right:6px;"></i>{{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <!-- LOGIN -->
+        <div id="login-form">
+            <form action="{{ url_for('login') }}" method="POST" style="text-align: left;" onsubmit="return validateLogin()">
+                <div class="input-group">
+                    <label>Email Address</label><i class="ph ph-envelope"></i>
+                    <input type="email" name="email" id="loginEmail" required placeholder="you@example.com">
+                    <span id="loginEmailErr" style="color:#ef4444;font-size:12px;display:none;margin-top:4px;"></span>
+                </div>
+                <div class="input-group">
+                    <label>Password</label><i class="ph ph-lock-key"></i>
+                    <input type="password" name="password" id="loginPass" required placeholder="••••••">
+                    <span id="loginPassErr" style="color:#ef4444;font-size:12px;display:none;margin-top:4px;"></span>
+                </div>
+                <button type="submit" class="btn btn-primary w-full" style="margin-bottom: 24px;"><i class="ph ph-sign-in"></i> Login</button>
+            </form>
+            <div style="display: flex; justify-content: space-between;">
+                <a href="#" onclick="toggleAuth('signup')" style="font-size: 14px;">Create Account</a>
+                <a href="#" onclick="toggleAuth('forgot')" style="font-size: 14px; color: var(--text-muted);">Forgot Password?</a>
+            </div>
+        </div>
+
+        <!-- SIGNUP -->
+        <div id="signup-form" style="display: none;">
+            <form action="{{ url_for('signup') }}" method="POST" style="text-align: left;" onsubmit="return validateSignup()">
+                <div class="input-group">
+                    <label>Display Name</label><i class="ph ph-user"></i>
+                    <input type="text" name="name" id="signupName" required placeholder="John Doe">
+                    <span id="signupNameErr" style="color:#ef4444;font-size:12px;display:none;margin-top:4px;"></span>
+                </div>
+                <div class="input-group">
+                    <label>Email Address</label><i class="ph ph-envelope"></i>
+                    <input type="email" name="email" id="signupEmail" required placeholder="you@example.com">
+                    <span id="signupEmailErr" style="color:#ef4444;font-size:12px;display:none;margin-top:4px;"></span>
+                </div>
+                <div class="input-group">
+                    <label>Password</label><i class="ph ph-lock-key"></i>
+                    <input type="password" name="password" id="signupPass" required placeholder="Min 6 chars, 1 letter + 1 number">
+                    <span id="signupPassErr" style="color:#ef4444;font-size:12px;display:none;margin-top:4px;"></span>
+                </div>
+                <div id="passStrength" style="margin:-16px 0 20px;display:flex;gap:4px;">
+                    <div style="flex:1;height:4px;border-radius:4px;background:rgba(0,0,0,0.1);" id="str1"></div>
+                    <div style="flex:1;height:4px;border-radius:4px;background:rgba(0,0,0,0.1);" id="str2"></div>
+                    <div style="flex:1;height:4px;border-radius:4px;background:rgba(0,0,0,0.1);" id="str3"></div>
+                </div>
+                <button type="submit" class="btn btn-orange w-full" style="margin-bottom: 24px;"><i class="ph ph-user-plus"></i> Create Account</button>
+            </form>
+            <a href="#" onclick="toggleAuth('login')" style="font-size: 14px;">← Back to Login</a>
+        </div>
+
+        <!-- FORGOT -->
+        <div id="forgot-form" style="display: none;">
+            <p style="margin-bottom: 24px; text-align: left; font-size: 14px;">Enter your email to receive a reset link.</p>
+            <form action="{{ url_for('forgot_password') }}" method="POST" style="text-align: left;" onsubmit="return validateForgot()">
+                <div class="input-group">
+                    <label>Email Address</label><i class="ph ph-envelope"></i>
+                    <input type="email" name="email" id="forgotEmail" required placeholder="you@example.com">
+                    <span id="forgotEmailErr" style="color:#fca5a5;font-size:12px;display:none;margin-top:4px;"></span>
+                </div>
+                <button type="submit" class="btn btn-primary w-full" style="margin-bottom: 24px;">Send Reset Link</button>
+            </form>
+            <a href="#" onclick="toggleAuth('login')" style="font-size: 14px;">← Back to Login</a>
+        </div>
+    </div>
+</div>
+
+<script>
+const emailRe = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+function hideErr(id) { document.getElementById(id).style.display = 'none'; }
+
+function validateLogin() {
+    let ok = true;
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    hideErr('loginEmailErr'); hideErr('loginPassErr');
+    if (!emailRe.test(email)) { showErr('loginEmailErr', 'Please enter a valid email (e.g. user@example.com)'); ok = false; }
+    if (!pass) { showErr('loginPassErr', 'Password is required'); ok = false; }
+    return ok;
+}
+
+function validateSignup() {
+    let ok = true;
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const pass = document.getElementById('signupPass').value;
+    hideErr('signupNameErr'); hideErr('signupEmailErr'); hideErr('signupPassErr');
+
+    if (name.length < 2) { showErr('signupNameErr', 'Name must be at least 2 characters'); ok = false; }
+    else if (!/^[a-zA-Z\s\'-]+$/.test(name)) { showErr('signupNameErr', 'Name can only contain letters, spaces, hyphens'); ok = false; }
+
+    if (!emailRe.test(email)) { showErr('signupEmailErr', 'Please enter a valid email (e.g. user@example.com)'); ok = false; }
+
+    if (pass.length < 6) { showErr('signupPassErr', 'Password must be at least 6 characters'); ok = false; }
+    else if (!/[A-Za-z]/.test(pass)) { showErr('signupPassErr', 'Password must contain at least one letter'); ok = false; }
+    else if (!/[0-9]/.test(pass)) { showErr('signupPassErr', 'Password must contain at least one number'); ok = false; }
+    return ok;
+}
+
+function validateForgot() {
+    hideErr('forgotEmailErr');
+    if (!emailRe.test(document.getElementById('forgotEmail').value.trim())) {
+        showErr('forgotEmailErr', 'Please enter a valid email'); return false;
+    }
+    return true;
+}
+
+function toggleAuth(view) {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('signup-form').style.display = 'none';
+    document.getElementById('forgot-form').style.display = 'none';
+    document.getElementById(view + '-form').style.display = 'block';
+}
+
+// Password strength meter
+document.addEventListener('DOMContentLoaded', () => {
+    const passInput = document.getElementById('signupPass');
+    if (passInput) {
+        passInput.addEventListener('input', () => {
+            const v = passInput.value;
+            let s = 0;
+            if (v.length >= 6) s++;
+            if (/[A-Za-z]/.test(v) && /[0-9]/.test(v)) s++;
+            if (v.length >= 10 && /[^A-Za-z0-9]/.test(v)) s++;
+            const colors = ['#f87171', '#fbbf24', '#34d399'];
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById('str' + i).style.background = i <= s ? colors[s - 1] : 'rgba(255,255,255,0.1)';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

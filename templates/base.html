@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traveloop — Smart Trip Planner</title>
+    <meta name="description" content="Plan multi-city trips with auto-budgeting, activity suggestions, and AI travel assistant.">
+    <!-- Modern Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Base CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=15) }}">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body class="{% if theme %}theme-{{ theme }}{% endif %}">
+    <div class="app-container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- AI Chatbot Widget -->
+    <div id="chatWidget" style="position:fixed;bottom:24px;right:24px;z-index:9999;">
+        <div id="chatBox" style="display:none;width:380px;max-height:520px;background:rgba(15,25,35,0.97);backdrop-filter:blur(20px);border-radius:24px;border:1px solid rgba(56,189,248,0.2);box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;flex-direction:column;">
+            <div style="padding:16px 20px;background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(251,191,36,0.08));border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:18px;">🤖</div>
+                    <div><p style="font-weight:700;font-size:14px;color:white;">Travel Assistant</p><p style="font-size:11px;color:#34d399;">Online</p></div>
+                </div>
+                <button onclick="toggleChat()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:20px;"><i class="ph ph-x"></i></button>
+            </div>
+            <div id="chatMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:300px;max-height:360px;">
+                <div class="chat-bot">👋 Hi! I'm your travel assistant. Ask me about destinations, budgets, activities, or packing tips!</div>
+            </div>
+            <div style="padding:12px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;">
+                <input type="text" id="chatInput" placeholder="Ask about Paris, budgets..." style="flex:1;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:white;font-size:14px;outline:none;" onkeypress="if(event.key==='Enter')sendChat()">
+                <button onclick="sendChat()" style="padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,#38bdf8,#0284c7);border:none;color:white;cursor:pointer;font-size:16px;"><i class="ph ph-paper-plane-tilt"></i></button>
+            </div>
+        </div>
+        <button id="chatToggle" onclick="toggleChat()" style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#fbbf24);border:none;cursor:pointer;box-shadow:0 8px 32px rgba(56,189,248,0.4);font-size:28px;color:white;transition:transform 0.3s,box-shadow 0.3s;display:flex;align-items:center;justify-content:center;margin-left:auto;">🤖</button>
+    </div>
+    <style>
+        .chat-bot{background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.15);border-radius:16px 16px 16px 4px;padding:12px 16px;font-size:13px;color:#e2e8f0;line-height:1.5;white-space:pre-wrap;max-width:90%;align-self:flex-start;}
+        .chat-user{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.15);border-radius:16px 16px 4px 16px;padding:12px 16px;font-size:13px;color:#fef3c7;max-width:90%;align-self:flex-end;}
+        #chatToggle:hover{transform:scale(1.1);box-shadow:0 12px 40px rgba(56,189,248,0.5);}
+    </style>
+
+    <!-- Scripts -->
+    <script>
+        // Spotlight tracking
+        document.addEventListener("mousemove", e => {
+            document.querySelectorAll(".bento-item, .glass-panel").forEach(card => {
+                const rect = card.getBoundingClientRect();
+                card.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
+                card.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
+            });
+        });
+
+        // Smooth page transitions
+        document.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', e => {
+                const href = link.getAttribute('href');
+                if(href && href !== '#' && link.getAttribute('target') !== '_blank' && link.href.startsWith(window.location.origin)) {
+                    document.body.style.opacity = '0';
+                    document.body.style.transition = 'opacity 0.3s ease';
+                }
+            });
+        });
+        window.addEventListener('pageshow', () => { document.body.style.opacity = '1'; });
+
+        // Chatbot
+        function toggleChat() {
+            const box = document.getElementById('chatBox');
+            const btn = document.getElementById('chatToggle');
+            if (box.style.display === 'none') {
+                box.style.display = 'flex'; btn.style.display = 'none';
+            } else {
+                box.style.display = 'none'; btn.style.display = 'flex';
+            }
+        }
+        function sendChat() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="chat-user">${msg}</div>`;
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: msg})
+            })
+            .then(r => r.json())
+            .then(data => {
+                container.innerHTML += `<div class="chat-bot">${data.reply}</div>`;
+                container.scrollTop = container.scrollHeight;
+            })
+            .catch(() => {
+                container.innerHTML += `<div class="chat-bot">Sorry, something went wrong. Try again!</div>`;
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mesh-bg"></div>
+<nav class="navbar animate-in">
+    <div class="nav-brand" onclick="window.location.href='{{ url_for('dashboard') }}'"><i class="ph-fill ph-planet text-gradient-cyan"></i><span>Traveloop</span></div>
+    <div><a href="{{ url_for('dashboard') }}" class="btn btn-outline"><i class="ph ph-arrow-left"></i> Back</a></div>
+</nav>
+
+<div style="display:flex;justify-content:center;margin-top:40px;">
+    <div class="bento-item animate-in" style="width:100%;max-width:700px;padding:48px;">
+        <div style="text-align:center;margin-bottom:40px;">
+            <div class="badge badge-orange" style="margin-bottom:16px;">New Trip</div>
+            <h2>Plan Your <span class="text-gradient-orange">Journey</span></h2>
+            <p>Set your dates — then pick cities and we handle the rest.</p>
+        </div>
+        <form action="{{ url_for('create_trip') }}" method="POST">
+            <div class="input-group"><label>Trip Name</label><i class="ph ph-text-t"></i>
+                <input type="text" name="name" placeholder="e.g. Summer in Europe" required>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                <div class="input-group"><label>Start Date</label><i class="ph ph-calendar-plus"></i><input type="date" name="start_date" required></div>
+                <div class="input-group"><label>End Date</label><i class="ph ph-calendar-check"></i><input type="date" name="end_date" required></div>
+            </div>
+            <div class="input-group"><label>Description (optional)</label><i class="ph ph-note-pencil"></i>
+                <input type="text" name="description" placeholder="What's the vibe?">
+            </div>
+            <div class="input-group"><label>Cover Photo URL (optional)</label><i class="ph ph-image"></i>
+                <input type="url" name="cover_photo" placeholder="https://...">
+            </div>
+            <button type="submit" class="btn btn-orange w-full" style="padding:20px;font-size:16px;margin-top:16px;"><i class="ph-bold ph-rocket-launch"></i> Create & Start Planning</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
