@@ -5,9 +5,12 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'traveloop-hackathon-2026-secret')
 
     # ── DATABASE ──────────────────────────────────────────────────────────
-    # SQLite (demo/prototype):
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL',
-        'sqlite:///' + os.path.join(os.path.dirname(__file__), 'traveloop.db'))
+    # SQLite (demo/prototype) fallback, handle Render's postgres:// prefix
+    db_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(os.path.dirname(__file__), 'traveloop.db'))
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    
+    SQLALCHEMY_DATABASE_URI = db_url
 
     # MySQL (production — uncomment and set credentials):
     # SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://user:password@localhost/traveloop'
