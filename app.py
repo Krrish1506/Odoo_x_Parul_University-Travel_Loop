@@ -419,6 +419,9 @@ def admin():
                            total_acts=Activity.query.filter_by(is_selected=True).count(),
                            users=users, trips=trips, top_cities=top_cities)
 
-# ── Run ───────────────────────────────────────────────────────────────
+import os
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    # Bind to 0.0.0.0 so Render can detect the open port
+    app.run(host='0.0.0.0', port=port, debug=False)
